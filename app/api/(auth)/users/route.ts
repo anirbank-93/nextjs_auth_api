@@ -13,3 +13,21 @@ export const GET = async () => {
     });
   }
 };
+
+export const POST = async (request: Request) => {
+  try {
+    const body = await request.json();
+    await connect();
+    const NEW_USER = new userModel(body);
+    await NEW_USER.save();
+
+    return new NextResponse(
+      JSON.stringify({ message: "New user created", data: NEW_USER }),
+      { status: 201 }
+    );
+  } catch (error: any) {
+    return new NextResponse("Failed to create user due to " + error.message, {
+      status: 500,
+    });
+  }
+};
