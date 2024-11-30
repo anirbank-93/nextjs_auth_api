@@ -6,7 +6,10 @@ export const GET = async () => {
   try {
     await connect();
     const users = await userModel.find();
-    return new NextResponse(JSON.stringify(users), { status: 200 });
+    return new NextResponse(
+      JSON.stringify({ message: "Users get successfully", data: users }),
+      { status: 200 }
+    );
   } catch (error: any) {
     return new NextResponse("Failed to get users due to " + error.message, {
       status: 500,
@@ -31,3 +34,15 @@ export const POST = async (request: Request) => {
     });
   }
 };
+
+// export const PUT = async (
+//   request: Request
+// ) => {
+//   const { searchParams } = new URL(request.url);
+//   const userId = searchParams.get("user_id");
+
+//   try {
+//   } catch (error: any) {
+//     //
+//   }
+// };
