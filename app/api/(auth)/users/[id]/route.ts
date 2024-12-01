@@ -1,8 +1,11 @@
 import connect from "@/lib/db";
-import userModel from "@/lib/models/users.model";
-import categoryModel from "@/lib/models/category.model";
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
+
+// Models
+import userModel from "@/lib/models/users.model";
+import categoryModel from "@/lib/models/category.model";
+import blogModel from "@/lib/models/blog.model";
 
 export const PATCH = async (
   request: Request,
@@ -12,7 +15,7 @@ export const PATCH = async (
 
   try {
     const body = await request.json();
-    
+
     if (!id || !body || Object.keys(body).length === 0) {
       return new NextResponse(
         JSON.stringify({ message: "ID or data not found" }),
@@ -70,12 +73,15 @@ export const DELETE = async (
 
     await connect();
 
-    // Preventing delete of user without deleting the child relations
-    const categories = await categoryModel.find({
+    /** ---------- Preventing delete of user without deleting the child relations ---------- */
+    let userQuery = {
       user: new mongoose.Types.ObjectId(id),
-    });
+    };
 
-    if (categories.length > 0) {
+    const categories = await categoryModel.find(userQuery);
+    const blogs = await blogModel.find(userQuery);
+
+    if (categories.length > 0 || blogs.length > 0) {
       return new NextResponse(
         JSON.stringify({
           message:
@@ -84,6 +90,7 @@ export const DELETE = async (
         { status: 500 }
       );
     }
+    /** ---------------------------------------------------------------------------------- */
 
     const user = await userModel.findOneAndDelete({ _id: id });
 
