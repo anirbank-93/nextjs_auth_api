@@ -10,9 +10,9 @@ export const PATCH = async (
 ) => {
   try {
     const { id } = await route.params;
-    const { user_id, ...restOfBody } = await request.json();
+    const body = await request.json();
 
-    if (!id || !restOfBody || Object.keys({ ...restOfBody }).length === 0) {
+    if (!id || !body || Object.keys(body).length === 0) {
       return new NextResponse(
         JSON.stringify({ message: "Category id or data not found" }),
         { status: 400 }
@@ -28,25 +28,11 @@ export const PATCH = async (
       );
     }
 
-    if (!Types.ObjectId.isValid(user_id)) {
-      return new NextResponse(JSON.stringify({ message: "Invalid user id." }), {
-        status: 400,
-      });
-    }
-
     await connect();
-
-    const user = await userModel.findById(user_id);
-
-    if (!user) {
-      return new NextResponse(JSON.stringify({ message: "User not found." }), {
-        status: 404,
-      });
-    }
 
     const updatedCategory = await categoryModel.findOneAndUpdate(
       { _id: id },
-      { user_id, ...restOfBody },
+      body,
       {
         new: true,
       }
@@ -68,6 +54,54 @@ export const PATCH = async (
   } catch (error: any) {
     return new NextResponse(
       "Error updating the category due to " + error.message,
+      { status: 500 }
+    );
+  }
+};
+
+export const DELETE = async (
+  request: Request,
+  route: { params: Types.ObjectId }
+) => {
+  try {
+    const { id } = await route.params;
+
+    if (!id) {
+      return new NextResponse(
+        JSON.stringify({ message: "Category id not found" }),
+        { status: 400 }
+      );
+    }
+
+    if (!Types.ObjectId.isValid(id)) {
+      return new NextResponse(
+        JSON.stringify({ message: "Invalid category id." }),
+        {
+          status: 400,
+        }
+      );
+    }
+
+    await connect();
+
+    const category = await categoryModel.findOneAndDelete({ _id: id });
+
+    if (!category) {
+      return new NextResponse(
+        JSON.stringify({ message: "Category not found." }),
+        {
+          status: 404,
+        }
+      );
+    }
+
+    return new NextResponse(
+      JSON.stringify({ message: "User deleted.", data: category }),
+      { status: 200 }
+    );
+  } catch (error: any) {
+    return new NextResponse(
+      "Error deleting the category due to " + error.message,
       { status: 500 }
     );
   }
