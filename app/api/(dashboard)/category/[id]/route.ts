@@ -14,13 +14,22 @@ export const PATCH = async (
 
     if (!id || !restOfBody || Object.keys({ ...restOfBody }).length === 0) {
       return new NextResponse(
-        JSON.stringify({ message: "ID or data not found" }),
+        JSON.stringify({ message: "Category id or data not found" }),
         { status: 400 }
       );
     }
 
     if (!Types.ObjectId.isValid(id)) {
-      return new NextResponse(JSON.stringify({ message: "Invalid ID." }), {
+      return new NextResponse(
+        JSON.stringify({ message: "Invalid category id." }),
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (!Types.ObjectId.isValid(user_id)) {
+      return new NextResponse(JSON.stringify({ message: "Invalid user id." }), {
         status: 400,
       });
     }
@@ -30,7 +39,7 @@ export const PATCH = async (
     const user = await userModel.findById(user_id);
 
     if (!user) {
-      return new NextResponse(JSON.stringify({ message: "User not found" }), {
+      return new NextResponse(JSON.stringify({ message: "User not found." }), {
         status: 404,
       });
     }
