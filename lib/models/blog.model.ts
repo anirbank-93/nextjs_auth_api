@@ -16,6 +16,7 @@ const BLOG_SCHEMA = new Schema(
     },
     category: {
       type: [{ type: Schema.Types.ObjectId, ref: "Category" }],
+      default: [],
     },
   },
   {

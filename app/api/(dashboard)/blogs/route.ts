@@ -16,11 +16,11 @@ export const GET = async (request: Request) => {
     const userId = searchParams.get("user_id");
     const categoryId = searchParams.get("category_id");
 
-    if (!userId || !Types.ObjectId.isValid(userId)) {
+    if (userId && !Types.ObjectId.isValid(userId)) {
       return new NextResponse("Invalid user id", { status: 400 });
     }
 
-    if (!categoryId || !Types.ObjectId.isValid(categoryId)) {
+    if (categoryId && !Types.ObjectId.isValid(categoryId)) {
       return new NextResponse("Invalid category id", { status: 400 });
     }
 
@@ -49,19 +49,30 @@ export const GET = async (request: Request) => {
       }
     }
 
-    let filter: BlogFilterQuery = {
-      user: new Types.ObjectId(userId),
-      // category: new Types.ObjectId(categoryId),
-    };
+    // let filter: BlogFilterQuery;
 
     // const blogs = await blogModel.find({
     //   user: new Types.ObjectId(userId),
     //   category: new Types.ObjectId(categoryId)
     // });
     const blogs = await blogModel.aggregate([
+      userId
+        ? {
+            $match: {
+              user: new Types.ObjectId(userId),
+            },
+          }
+        : { $project: { __v: 0 } },
       {
-        $match: filter,
+        $unwind: "$category",
       },
+      categoryId
+        ? {
+            $match: {
+              category: new Types.ObjectId(categoryId),
+            },
+          }
+        : { $project: { __v: 0 } },
       {
         $lookup: {
           from: "users",
@@ -72,9 +83,6 @@ export const GET = async (request: Request) => {
       },
       {
         $unwind: "$user_info",
-      },
-      {
-        $unwind: "$category",
       },
       {
         $lookup: {
@@ -105,12 +113,6 @@ export const GET = async (request: Request) => {
           category_info: { $push: "$category_info" },
         },
       },
-      // {
-      //   $project: {
-      //     user: 0,
-      //     category: 0,
-      //   },
-      // },
     ]);
 
     if (!blogs) {
@@ -121,14 +123,14 @@ export const GET = async (request: Request) => {
         { status: 404 }
       );
     } else {
-      // return new NextResponse(
-      //   JSON.stringify({
-      //     message: "Blogs successfully get.",
-      //     data: blogs,
-      //   }),
-      //   { status: 200 }
-      // );
-      return Response.json({ message: "Get", data: blogs });
+      return new NextResponse(
+        JSON.stringify({
+          message: "Blogs successfully get.",
+          data: blogs,
+        }),
+        { status: 200 }
+      );
+      // return Response.json({ message: "Get", data: blogs });
     }
   } catch (error: any) {
     return new NextResponse(
