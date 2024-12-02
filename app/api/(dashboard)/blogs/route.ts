@@ -5,11 +5,6 @@ import categoryModel from "@/lib/models/category.model";
 import { Types } from "mongoose";
 import blogModel from "@/lib/models/blog.model";
 
-interface BlogFilterQuery {
-  user?: Types.ObjectId;
-  category?: Types.ObjectId;
-}
-
 export const GET = async (request: Request) => {
   try {
     const { searchParams } = new URL(request.url);
@@ -123,14 +118,14 @@ export const GET = async (request: Request) => {
         { status: 404 }
       );
     } else {
-      return new NextResponse(
-        JSON.stringify({
-          message: "Blogs successfully get.",
-          data: blogs,
-        }),
-        { status: 200 }
-      );
-      // return Response.json({ message: "Get", data: blogs });
+      // return new NextResponse(
+      //   JSON.stringify({
+      //     message: "Blogs successfully get.",
+      //     data: blogs,
+      //   }),
+      //   { status: 200 }
+      // );
+      return Response.json({ message: "Get", data: blogs });
     }
   } catch (error: any) {
     return new NextResponse(
@@ -154,6 +149,16 @@ export const POST = async (request: Request) => {
       return new NextResponse("Atleast one category is required.", {
         status: 400,
       });
+    }
+    for (let i: number = 0; i < category_id.length; i++) {
+      if (!Types.ObjectId.isValid(category_id[i])) {
+        return new NextResponse(
+          `Category with id ${category_id[i]} is invalid`,
+          {
+            status: 400,
+          }
+        );
+      }
     }
 
     await connect();
