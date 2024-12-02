@@ -85,8 +85,6 @@ export const DELETE = async (
     await connect();
 
     /** ---------- Preventing delete of user without deleting the child relations ---------- */
-    let exist: boolean = false;
-
     const blogs = await blogModel.aggregate([
       {
         $unwind: "$category",
@@ -102,7 +100,7 @@ export const DELETE = async (
       return new NextResponse(
         JSON.stringify({
           message:
-            "Please delete the related children before deleting the user",
+            "Please delete the related children before deleting the category",
         }),
         { status: 500 }
       );
