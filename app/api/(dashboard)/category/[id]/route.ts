@@ -1,7 +1,7 @@
 import connect from "@/lib/db";
-import userModel from "@/lib/models/users.model";
 import { NextResponse } from "next/server";
 import categoryModel from "@/lib/models/category.model";
+import blogModel from "@/lib/models/blog.model";
 import { Types } from "mongoose";
 
 export const PATCH = async (
@@ -48,7 +48,7 @@ export const PATCH = async (
     }
 
     return new NextResponse(
-      JSON.stringify({ message: "User updated", data: updatedCategory }),
+      JSON.stringify({ message: "Category updated", data: updatedCategory }),
       { status: 200 }
     );
   } catch (error: any) {
@@ -83,6 +83,31 @@ export const DELETE = async (
     }
 
     await connect();
+
+    /** ---------- Preventing delete of user without deleting the child relations ---------- */
+    let exist: boolean = false;
+
+    const blogs = await blogModel.aggregate([
+      {
+        $unwind: "$category",
+      },
+      {
+        $match: {
+          category: new Types.ObjectId(id),
+        },
+      },
+    ]);
+
+    if (blogs.length > 0) {
+      return new NextResponse(
+        JSON.stringify({
+          message:
+            "Please delete the related children before deleting the user",
+        }),
+        { status: 500 }
+      );
+    }
+    /** ---------------------------------------------------------------------------------- */
 
     const category = await categoryModel.findOneAndDelete({ _id: id });
 
