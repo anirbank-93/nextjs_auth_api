@@ -6,7 +6,8 @@ import blogModel from "@/lib/models/blog.model";
 
 export const PATCH = async (
   request: Request,
-  route: { params: { id: Types.ObjectId } }
+  // route: { params: { id: Types.ObjectId } }
+  route: { params: any }
 ) => {
   try {
     const { id } = await route.params;
@@ -75,7 +76,8 @@ export const PATCH = async (
 
 export const DELETE = async (
   request: Request,
-  route: { params: Types.ObjectId }
+  // route: { params: Types.ObjectId }
+  route: { params: any }
 ) => {
   try {
     const { id } = await route.params;
