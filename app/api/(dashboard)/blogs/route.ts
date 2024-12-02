@@ -51,7 +51,7 @@ export const GET = async (request: Request) => {
 
     let filter: BlogFilterQuery = {
       user: new Types.ObjectId(userId),
-      category: new Types.ObjectId(categoryId),
+      // category: new Types.ObjectId(categoryId),
     };
 
     // const blogs = await blogModel.find({
@@ -74,6 +74,9 @@ export const GET = async (request: Request) => {
         $unwind: "$user_info",
       },
       {
+        $unwind: "$category",
+      },
+      {
         $lookup: {
           from: "categories",
           localField: "category",
@@ -82,11 +85,32 @@ export const GET = async (request: Request) => {
         },
       },
       {
-        $project: {
-          user: 0,
-          category: 0,
+        $unwind: "$category_info",
+      },
+      {
+        $group: {
+          _id: {
+            _id: "$_id",
+            // title: { $first: "$title" },
+            // description: { $first: "$description" },
+            // user_info: { $first: "$user_info" },
+            // createdAt: { $first: "$createdAt" },
+            // updatedAt: { $first: "$updatedAt" },
+            title: "$title",
+            description: "$description",
+            user_info: "$user_info",
+            createdAt: "$createdAt",
+            updatedAt: "$updatedAt",
+          },
+          category_info: { $push: "$category_info" },
         },
       },
+      // {
+      //   $project: {
+      //     user: 0,
+      //     category: 0,
+      //   },
+      // },
     ]);
 
     if (!blogs) {
@@ -97,13 +121,14 @@ export const GET = async (request: Request) => {
         { status: 404 }
       );
     } else {
-      return new NextResponse(
-        JSON.stringify({
-          message: "Blogs successfully get.",
-          data: blogs,
-        }),
-        { status: 200 }
-      );
+      // return new NextResponse(
+      //   JSON.stringify({
+      //     message: "Blogs successfully get.",
+      //     data: blogs,
+      //   }),
+      //   { status: 200 }
+      // );
+      return Response.json({ message: "Get", data: blogs });
     }
   } catch (error: any) {
     return new NextResponse(
@@ -113,5 +138,57 @@ export const GET = async (request: Request) => {
       }),
       { status: 500 }
     );
+  }
+};
+
+export const POST = async (request: Request) => {
+  try {
+    const { user_id, category_id, ...restOfBody } = await request.json();
+
+    if (!user_id || !Types.ObjectId.isValid(user_id)) {
+      return new NextResponse("Invalid user id", { status: 400 });
+    }
+    if (!category_id || category_id.length === 0) {
+      return new NextResponse("Atleast one category is required.", {
+        status: 400,
+      });
+    }
+
+    await connect();
+
+    const user = await userModel.findById(user_id);
+
+    if (!user) {
+      return new NextResponse(JSON.stringify({ message: "User not found" }), {
+        status: 404,
+      });
+    }
+
+    const category = await categoryModel.findById(category_id);
+
+    if (!category) {
+      return new NextResponse(
+        JSON.stringify({ message: "Category not found" }),
+        {
+          status: 404,
+        }
+      );
+    }
+
+    const NEW_BLOG = new blogModel({
+      user: user_id,
+      category: category_id.map((item: string) => new Types.ObjectId(item)),
+      ...restOfBody,
+    });
+    await NEW_BLOG.save();
+
+    return new NextResponse(
+      JSON.stringify({ message: "New category created", data: NEW_BLOG }),
+      { status: 201 }
+    );
+  } catch (error: any) {
+    return new NextResponse("Failed to add blog due to " + error.message, {
+      status: 500,
+    });
   }
 };
