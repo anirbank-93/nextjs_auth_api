@@ -10,105 +10,152 @@ export const GET = async (request: Request) => {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("user_id");
     const categoryId = searchParams.get("category_id");
-
-    if (userId && !Types.ObjectId.isValid(userId)) {
-      return new NextResponse("Invalid user id", { status: 400 });
-    }
-
-    if (categoryId && !Types.ObjectId.isValid(categoryId)) {
-      return new NextResponse("Invalid category id", { status: 400 });
-    }
+    const searchKeywords = searchParams.get("q") as string;
+    const startDate = searchParams.get("start_date");
+    const endDate = searchParams.get("end_date");
+    const page = searchParams.get("page") || "1";
+    const limit = searchParams.get("limit") || "10";
 
     await connect();
 
     if (userId) {
-      const user = await userModel.findById(userId);
+      if (Types.ObjectId.isValid(userId)) {
+        const user = await userModel.findById(userId);
 
-      if (!user) {
-        return new NextResponse(JSON.stringify({ message: "User not found" }), {
-          status: 404,
-        });
+        if (!user) {
+          return new NextResponse(
+            JSON.stringify({ message: "User not found" }),
+            {
+              status: 404,
+            }
+          );
+        }
+      } else {
+        return new NextResponse("Invalid user id", { status: 400 });
       }
     }
 
     if (categoryId) {
-      const category = await categoryModel.findById(categoryId);
+      if (Types.ObjectId.isValid(categoryId)) {
+        const category = await categoryModel.findById(categoryId);
 
-      if (!category) {
-        return new NextResponse(
-          JSON.stringify({ message: "Category not found" }),
-          {
-            status: 404,
-          }
-        );
+        if (!category) {
+          return new NextResponse(
+            JSON.stringify({ message: "Category not found" }),
+            {
+              status: 404,
+            }
+          );
+        }
+      } else {
+        return new NextResponse("Invalid category id", { status: 400 });
       }
     }
 
-    // let filter: BlogFilterQuery;
+    // const blogs = await blogModel.aggregate([
+    //   userId
+    //     ? {
+    //         $match: {
+    //           user: new Types.ObjectId(userId),
+    //         },
+    //       }
+    //     : { $project: { __v: 0 } },
+    //   {
+    //     $unwind: "$category",
+    //   },
+    //   categoryId
+    //     ? {
+    //         $match: {
+    //           category: new Types.ObjectId(categoryId),
+    //         },
+    //       }
+    //     : { $project: { __v: 0 } },
+    //   {
+    //     $lookup: {
+    //       from: "users",
+    //       localField: "user",
+    //       foreignField: "_id",
+    //       as: "user_info",
+    //     },
+    //   },
+    //   {
+    //     $unwind: "$user_info",
+    //   },
+    //   {
+    //     $lookup: {
+    //       from: "categories",
+    //       localField: "category",
+    //       foreignField: "_id",
+    //       as: "category_info",
+    //     },
+    //   },
+    //   {
+    //     $unwind: "$category_info",
+    //   },
+    //   {
+    //     $group: {
+    //       _id: {
+    //         _id: "$_id",
+    //         // title: { $first: "$title" },
+    //         // description: { $first: "$description" },
+    //         // user_info: { $first: "$user_info" },
+    //         // createdAt: { $first: "$createdAt" },
+    //         // updatedAt: { $first: "$updatedAt" },
+    //         title: "$title",
+    //         description: "$description",
+    //         user_info: "$user_info",
+    //         createdAt: "$createdAt",
+    //         updatedAt: "$updatedAt",
+    //       },
+    //       category_info: { $push: "$category_info" },
+    //     },
+    //   },
+    // ]);
+    let filter: any = {};
 
-    // const blogs = await blogModel.find({
-    //   user: new Types.ObjectId(userId),
-    //   category: new Types.ObjectId(categoryId)
-    // });
-    const blogs = await blogModel.aggregate([
-      userId
-        ? {
-            $match: {
-              user: new Types.ObjectId(userId),
-            },
-          }
-        : { $project: { __v: 0 } },
-      {
-        $unwind: "$category",
-      },
-      categoryId
-        ? {
-            $match: {
-              category: new Types.ObjectId(categoryId),
-            },
-          }
-        : { $project: { __v: 0 } },
-      {
-        $lookup: {
-          from: "users",
-          localField: "user",
-          foreignField: "_id",
-          as: "user_info",
+    if (userId) {
+      filter.user = new Types.ObjectId(userId);
+    }
+
+    if (categoryId) {
+      filter.category = new Types.ObjectId(categoryId);
+    }
+
+    if (searchKeywords) {
+      filter.$or = [
+        {
+          title: { $regex: searchKeywords, $options: "i" },
         },
-      },
-      {
-        $unwind: "$user_info",
-      },
-      {
-        $lookup: {
-          from: "categories",
-          localField: "category",
-          foreignField: "_id",
-          as: "category_info",
+        {
+          description: { $regex: searchKeywords, $options: "i" },
         },
-      },
-      {
-        $unwind: "$category_info",
-      },
-      {
-        $group: {
-          _id: {
-            _id: "$_id",
-            // title: { $first: "$title" },
-            // description: { $first: "$description" },
-            // user_info: { $first: "$user_info" },
-            // createdAt: { $first: "$createdAt" },
-            // updatedAt: { $first: "$updatedAt" },
-            title: "$title",
-            description: "$description",
-            user_info: "$user_info",
-            createdAt: "$createdAt",
-            updatedAt: "$updatedAt",
-          },
-          category_info: { $push: "$category_info" },
-        },
-      },
-    ]);
+      ];
+    }
+
+    if (startDate && endDate) {
+      filter.createdAt = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
+      };
+    } else if (startDate) {
+      console.log(new Date(startDate));
+
+      filter.createdAt = {
+        $gte: new Date(startDate),
+      };
+    } else if (endDate) {
+      filter.createdAt = {
+        $lte: new Date(endDate),
+      };
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const blogs = await blogModel
+      .find(filter)
+      .sort({ createdAt: "asc" })
+      .skip(skip)
+      .limit(parseInt(limit));
 
     if (!blogs) {
       return new NextResponse(
@@ -131,7 +178,7 @@ export const GET = async (request: Request) => {
     return new NextResponse(
       JSON.stringify({
         message: "Server error. Please try again",
-        error: error,
+        error: error.message,
       }),
       { status: 500 }
     );
